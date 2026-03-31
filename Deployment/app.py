@@ -23,16 +23,16 @@ numVotes = st.sidebar.number_input("Num Votes (Popularity Proxy)", min_value=0, 
 # 1. User flips the switch
 is_original_toggle = st.sidebar.toggle("Is the movie an Original?", value=True)
 # 2. Convert the True/False into your dataset's words
-original_label = "Original" if is_original_toggle else "Non-Original"
+Original = "Original" if is_original_toggle else "Non-Original"
 # 3. Use this label for your calculations
-st.sidebar.write(f"Selection: **{original_label}**")
+st.sidebar.write(f"Selection: **{Original}**")
 
 # 1. User flips the switch
 is_franchise_toggle = st.sidebar.toggle("Is the movie a Franchise?", value=True)
 # 2. Convert the True/False into your dataset's words
-franchise_label = "Franchise" if is_franchise_toggle else "Non-Franchise"
+Franchise = "Franchise" if is_franchise_toggle else "Non-Franchise"
 # 3. Use this label for your calculations
-st.sidebar.write(f"Selection: **{franchise_label}**")
+st.sidebar.write(f"Selection: **{Franchise}**")
 
 # ---------------------------------------------------------
 # 3. CONSTANTS
@@ -47,12 +47,12 @@ MAX_RUNTIME_streaming = 95
 # 4. SCORE CALCULATION FUNCTION
 # ---------------------------------------------------------
 def compute_scores(row):
-    combined = "new" if row["is_original"] and not row["is_franchise"] else "old"
+    combined = "new" if row["Original"] and not row["Franchise"] else "old"
     commitment_weight = 1.8 if combined == "old" else 0.8
     convenience_weight = 1.8 if combined == "new" else 0.8
 
-    commitment = commitment_weight * (row["num_votes"] / MAX_VOTES_cinema) * (row["runtime"] / MAX_RUNTIME_cinema)
-    convenience = convenience_weight * (row["avg_rating"] / 10) * (1 - (row["runtime"] / MAX_RUNTIME_streaming))
+    commitment = commitment_weight * (row["numVotes"] / MAX_VOTES_cinema) * (row["runTime"] / MAX_RUNTIME_cinema)
+    convenience = convenience_weight * (row["averageRating"] / 10) * (1 - (row["runTime"] / MAX_RUNTIME_streaming))
 
     if commitment >= 0.03 and convenience >= 0.5:
         quadrant = "Scenario 4: Hybrid Logic"
@@ -73,8 +73,8 @@ single_df = pd.DataFrame([{
     "runtime": runTime,
     "avg_rating": averageRating,
     "num_votes": numVotes,
-    "is_original": original_label,
-    "is_franchise": franchise_label
+    "is_original": Original,
+    "is_franchise": Franchise
 }])
 
 single_df[["Commitment", "Convenience", "Quadrant", "LogicType"]] = single_df.apply(compute_scores, axis=1)
@@ -90,7 +90,7 @@ if uploaded_file:
     multi_df = pd.read_csv(uploaded_file)
 
     # Ensure required columns exist
-    required_cols = {"Title", "runtime", "avg_rating", "num_votes", "is_original", "is_franchise"}
+    required_cols = {"Title", "runTime", "averageRating", "numVotes", "Original", "Franchise"}
     if not required_cols.issubset(multi_df.columns):
         st.error(f"CSV must contain columns: {required_cols}")
         multi_df = None
