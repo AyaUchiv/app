@@ -18,87 +18,120 @@ import plotly.express as px
 # ---------------------------------------------------------
 st.set_page_config(page_title="Movie Strategic Quadrant Predictor", layout="wide")
 st.title("🎬 Movie Strategy & Performance Analyzer")
-st.markdown("Enter movie details to see where it falls in the **Hadida Strategic Quadrants**.")
+st.markdown("Enter movie details or upload a dataset to map movies into the **Hadida Strategic Quadrants**.")
 
 # ---------------------------------------------------------
 # 2. SIDEBAR INPUTS
 # ---------------------------------------------------------
-st.sidebar.header("Movie Metadata")
+st.sidebar.header("Single Movie Input")
 
 title = st.sidebar.text_input("Movie Title", "New Movie")
-distributor = st.sidebar.selectbox("Distributor", ["cinema", "streaming"])
 runtime = st.sidebar.number_input("Run Time (minutes)", min_value=1, value=100)
-genre = st.sidebar.text_input("Genre (e.g., Action, Drama)", "Drama")
-mpaa = st.sidebar.selectbox("MPAA Rating", ["G", "PG", "PG-13", "R", "Not Rated"])
-is_original = st.sidebar.toggle("Is Original?", value=True)
-is_franchise = st.sidebar.toggle("Is Franchise?", value=False)
 avg_rating = st.sidebar.slider("Average Rating (IMDb Proxy)", 1.0, 10.0, 6.5)
 num_votes = st.sidebar.number_input("Num Votes (Popularity Proxy)", min_value=0, value=1000)
+is_original = st.sidebar.toggle("Is Original?", value=True)
+is_franchise = st.sidebar.toggle("Is Franchise?", value=False)
 
 # ---------------------------------------------------------
-# 3. BACKGROUND CALCULATIONS
+# 3. CONSTANTS
 # ---------------------------------------------------------
-
-# Normalization constants (from dataset assumptions)
 MAX_VOTES = 1_500_000
 MAX_RUNTIME = 250
 
-# Determine logic type
-combined = "new" if is_original and not is_franchise else "old"
+# ---------------------------------------------------------
+# 4. SCORE CALCULATION FUNCTION
+# ---------------------------------------------------------
+def compute_scores(row):
+    combined = "new" if row["is_original"] and not row["is_franchise"] else "old"
+    commitment_weight = 1.8 if combined == "old" else 0.8
+    convenience_weight = 1.8 if combined == "new" else 0.8
 
-# Commitment Logic
-commitment_weight = 1.8 if combined == "old" else 0.8
-commitment_score = commitment_weight * (num_votes / MAX_VOTES) * (runtime / MAX_RUNTIME)
+    commitment = commitment_weight * (row["num_votes"] / MAX_VOTES) * (row["runtime"] / MAX_RUNTIME)
+    convenience = convenience_weight * (row["avg_rating"] / 10) * (1 - (row["runtime"] / MAX_RUNTIME))
 
-# Convenience Logic
-convenience_weight = 1.8 if combined == "new" else 0.8
-convenience_score = convenience_weight * (avg_rating / 10) * (1 - (runtime / MAX_RUNTIME))
+    if commitment >= 0.03 and convenience >= 0.5:
+        quadrant = "Scenario 4: Hybrid Logic"
+    elif commitment >= 0.03 and convenience < 0.5:
+        quadrant = "Scenario 1: Strong Commitment"
+    elif commitment < 0.03 and convenience >= 0.5:
+        quadrant = "Scenario 3: Strong Convenience"
+    else:
+        quadrant = "Scenario 2: Weak Commitment/Convenience"
 
-# Determine Quadrant
-if commitment_score >= 0.03 and convenience_score >= 0.5:
-    quadrant = "Scenario 4: Hybrid Logic"
-elif commitment_score >= 0.03 and convenience_score < 0.5:
-    quadrant = "Scenario 1: Strong Commitment"
-elif commitment_score < 0.03 and convenience_score >= 0.5:
-    quadrant = "Scenario 3: Strong Convenience"
-else:
-    quadrant = "Scenario 2: Weak Commitment/Convenience"
+    return pd.Series([commitment, convenience, quadrant, combined])
 
 # ---------------------------------------------------------
-# 4. DISPLAY RESULTS
+# 5. SINGLE MOVIE DATAFRAME
+# ---------------------------------------------------------
+single_df = pd.DataFrame([{
+    "Title": title,
+    "runtime": runtime,
+    "avg_rating": avg_rating,
+    "num_votes": num_votes,
+    "is_original": is_original,
+    "is_franchise": is_franchise
+}])
+
+single_df[["Commitment", "Convenience", "Quadrant", "LogicType"]] = single_df.apply(compute_scores, axis=1)
+
+# ---------------------------------------------------------
+# 6. OPTIONAL CSV UPLOAD
+# ---------------------------------------------------------
+st.sidebar.header("Upload Movie Dataset (Optional)")
+uploaded_file = st.sidebar.file_uploader("Upload CSV", type=["csv"])
+
+multi_df = None
+if uploaded_file:
+    multi_df = pd.read_csv(uploaded_file)
+
+    # Ensure required columns exist
+    required_cols = {"Title", "runtime", "avg_rating", "num_votes", "is_original", "is_franchise"}
+    if not required_cols.issubset(multi_df.columns):
+        st.error(f"CSV must contain columns: {required_cols}")
+        multi_df = None
+    else:
+        multi_df[["Commitment", "Convenience", "Quadrant", "LogicType"]] = multi_df.apply(compute_scores, axis=1)
+
+# ---------------------------------------------------------
+# 7. COMBINE DATA FOR PLOTTING
+# ---------------------------------------------------------
+plot_data = single_df.copy()
+if multi_df is not None:
+    plot_data = pd.concat([plot_data, multi_df], ignore_index=True)
+
+# ---------------------------------------------------------
+# 8. DISPLAY RESULTS
 # ---------------------------------------------------------
 col1, col2 = st.columns([1, 2])
 
 with col1:
-    st.subheader("Analysis Results")
-    st.metric("Strategic Quadrant", quadrant)
-    st.write(f"**Commitment Score:** {commitment_score:.4f}")
-    st.write(f"**Convenience Score:** {convenience_score:.4f}")
-    st.write(f"**Logic Type:** {combined.capitalize()}")
+    st.subheader("Single Movie Analysis")
+    st.metric("Strategic Quadrant", single_df["Quadrant"].iloc[0])
+    st.write(f"**Commitment Score:** {single_df['Commitment'].iloc[0]:.4f}")
+    st.write(f"**Convenience Score:** {single_df['Convenience'].iloc[0]:.4f}")
+    st.write(f"**Logic Type:** {single_df['LogicType'].iloc[0].capitalize()}")
+
+    if multi_df is not None:
+        st.subheader("Uploaded Dataset")
+        st.dataframe(multi_df)
 
 with col2:
-    # Data for scatter plot
-    plot_data = pd.DataFrame({
-        'Commitment': [commitment_score],
-        'Convenience': [convenience_score],
-        'Title': [title],
-        'Quadrant': [quadrant]
-    })
+    st.subheader("Strategic Quadrant Plot")
 
     fig = px.scatter(
         plot_data,
-        x='Commitment',
-        y='Convenience',
-        text='Title',
+        x="Commitment",
+        y="Convenience",
+        color="Quadrant",
+        text="Title",
         range_x=[0, 0.2],
         range_y=[0, 2.0],
-        title="Hadida Strategic Mapping"
+        title="Hadida Strategic Mapping (Single + Multiple Movies)"
     )
 
-    # Quadrant boundaries
     fig.add_vline(x=0.03, line_dash="dash", line_color="gray")
     fig.add_hline(y=0.5, line_dash="dash", line_color="gray")
 
     st.plotly_chart(fig, use_container_width=True)
 
-st.success(f"Successfully categorized '{title}' into **{quadrant}**!")
+st.success(f"Successfully categorized '{title}' into **{single_df['Quadrant'].iloc[0]}**!")
