@@ -77,7 +77,14 @@ single_df = pd.DataFrame([{
     "is_franchise": Franchise
 }])
 
-single_df[["Commitment", "Convenience", "Quadrant", "LogicType"]] = single_df.apply(compute_scores, axis=1)
+single_df = pd.DataFrame([{
+    "Title": Title,
+    "runTime": runTime,
+    "averageRating": averageRating,
+    "numVotes": numVotes,
+    "Original": True if is_original_toggle else False,
+    "Franchise": True if is_franchise_toggle else False
+}])
 
 # ---------------------------------------------------------
 # 6. OPTIONAL CSV UPLOAD
