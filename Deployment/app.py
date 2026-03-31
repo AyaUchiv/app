@@ -17,28 +17,25 @@ num_votes = st.sidebar.number_input("Num Votes Proxy", min_value=0, value=1000)
 is_original = st.sidebar.checkbox("Is Original Content?", value=True)
 is_franchise = st.sidebar.checkbox("Is part of a Franchise?", value=False)
 
-# --- DYNAMIC CONSTANTS ---
-# We swap the "Max" values based on the distributor to ensure normalized scores
-if distributor == "cinema":
-    MAX_VOTES = 1491508 
-    MAX_RUNTIME = 162
-else:
-    MAX_VOTES = 128373 
-    MAX_RUNTIME = 95
+# --- GLOBAL CONSTANTS (Using Dataset Maximums) ---
+# These must match your Tableau {FIXED : MAX()} values exactly
+MAX_VOTES = 1008108 
+MAX_RUNTIME = 266
 
 # --- SYSTEM CALCULATIONS ---
 # 1. Determine Logic Type
 combined = "new" if is_original and not is_franchise else "old"
 
-# 2. Assign Weights
-comm_weight = 1.8 if combined == "old" else 0.8
-conv_weight = 1.8 if combined == "new" else 0.8
+# 2. Assign Weights (Polarized for MSc Methodology)
+comm_weight = 1.5 if combined == "old" else 1
+conv_weight = 1.5 if combined == "new" else 1
 
-# 3. Calculate Scores (Normalized)
+# 3. Calculate Scores (Global Normalization)
 comm_score = comm_weight * (num_votes / MAX_VOTES) * (runtime / MAX_RUNTIME)
 conv_score = conv_weight * (avg_rating / 10) * (1 - (runtime / MAX_RUNTIME))
 
-# 4. Determine Scenario (The Quadrant)
+# 4. Determine Scenario (Using Median-based Thresholds)
+# Update 0.03 and 0.5 to match your Tableau Median Reference Lines
 if comm_score >= 0.03 and conv_score >= 0.5:
     quadrant = "Scenario 4: Hybrid Logic"
     description = "A blend of both theatrical commitment and digital convenience."
@@ -70,4 +67,4 @@ st.divider()
 with st.expander("View Technical Score Breakdown"):
     st.write(f"Normalized Commitment Score: `{comm_score:.4f}`")
     st.write(f"Normalized Convenience Score: `{conv_score:.4f}`")
-    st.info("Scores are normalized against the maximum values in the selected distributor category.")
+    st.info("Scores are normalized against Global Dataset Maximums to ensure cross-platform comparability.")
