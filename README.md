@@ -63,3 +63,5 @@ Model 1A — log normalisation, configuration 1 — was selected as the preferre
 - The TMDb API script requires a valid API key
 - IMDb non-commercial datasets are available at https://datasets.imdbws.com
 - AI assistance is acknowledged in each script header
+- Kaggle dataset is available at https://www.kaggle.com/datasets/michaelmatta0/movies-ultimate-metrics-features-and-metadata
+- Netflix top ten global weekly is available at https://www.netflix.com/tudum/top10/data/all-weeks-global.xlsx (https://www.netflix.com/tudum/top10)
