@@ -27,3 +27,39 @@ streaming releases.
 | Netflix global weekly top ten | Streaming performance classification |
 
 ## Repository Structure
+- data_preparation/netflix_imdb_tmdb.py — merges Wikipedia, TMDb API and IMDb for the streaming dataset
+- analysis/quadrant_analysis.py — runs all 9 model configurations and exports results
+- analysis/feature_importance.py — Random Forest feature importance and model evaluation
+- sql/imdb_query.sql — BigQuery query to extract IMDb film data
+- sql/kaggle_imdb_merge.sql — BigQuery query to merge Kaggle cinema data with IMDb
+
+## Requirements
+```
+pip install pandas numpy scikit-learn openpyxl requests
+```
+
+## How to Run
+Step 1 — Prepare streaming dataset
+python data_preparation/netflix_imdb_tmdb.py
+Requires: netflix_clean.xlsx, title.ratings.tsv, title.basics.tsv, all-weeks-global.xlsx
+
+Step 2 — Run feature importance analysis
+python analysis/feature_importance.py
+Requires: visuals.xlsx
+
+Step 3 — Run quadrant sensitivity analysis
+python analysis/quadrant_analysis.py
+Requires: visuals.xlsx
+Outputs: model_results.xlsx, model_1a_tableau.xlsx
+
+## Key Results
+Model 1A — log normalisation, configuration 1 — was selected as the preferred model.
+- Cinema accuracy: 89.0%
+- Streaming accuracy: 55.3%
+- Overall accuracy: 64.6%
+
+## Notes
+- Excel-based data preparation steps are documented in the dissertation Chapter 4
+- The TMDb API script requires a valid API key
+- IMDb non-commercial datasets are available at https://datasets.imdbws.com
+- AI assistance is acknowledged in each script header
